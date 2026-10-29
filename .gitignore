@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+
+# Variables de entorno y locales (NUNCA comitear)
+.env
+.env.local
+.env.*.local
+*.local
+
+# Service Account de Firebase (NUNCA comitear)
+service-account.json
+*service*.json
+*.json
+!package.json
+!tsconfig*.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor y SO
+.vscode/
+.idea/
+*.DS_Store

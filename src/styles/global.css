@@ -1,0 +1,288 @@
+/* NutriMesh — Sistema Visual Editorial Ashoka / Google */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;600;650;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Fondo oficial de borde a borde */
+  --color-canvas:       #F9F8F3;
+  --color-surface:      #FFFFFF;
+  --color-border:       #E4DDD0;
+
+  /* Tinta */
+  --color-ink:          #14211C;
+  --color-ink-sub:      #5C675F;
+  --color-ink-muted:    #5C675F;
+  --color-ink-faint:    #8C948D;
+
+  /* Colores de identidad */
+  --color-brand:        #059669; /* Verde marca oficial */
+  --color-lima:         #C6F54E; /* Lima acento */
+  --color-mostaza:      #D97706; /* Mostaza */
+  --color-terracota:    #C2410C; /* Terracota */
+  --color-bosque:       #14372C; /* Bosque barra banco */
+
+  /* Aliases funcionales */
+  --color-warn-text:    #D97706; /* Mostaza para < 3h */
+  --color-danger-text:  #C2410C; /* Terracota para rechazado o fuera de regla */
+
+  /* Tipografías */
+  --font-ui:   'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Espaciado */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Radios */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+}
+
+/* Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tipografía de títulos: peso 520, tracking -0.03em, sin mayúsculas */
+h1, h2, h3, h4 {
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  font-weight: 520;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+/* Contenedor principal con max-width 1120px */
+.app-container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+/* Tarjeta limpia */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+}
+
+/* Botones */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 24px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Botón primario: fondo #059669, texto #FFFFFF, radio 9999px */
+.btn--primary {
+  background: var(--color-brand);
+  color: #FFFFFF;
+  border-color: var(--color-brand);
+}
+.btn--primary:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+/* Botón secundario: sin fondo, borde 1px #059669, texto #059669 */
+.btn--secondary {
+  background: transparent;
+  color: var(--color-brand);
+  border: 1px solid var(--color-brand);
+}
+.btn--secondary:hover:not(:disabled) {
+  background: rgba(5, 150, 105, 0.06);
+}
+
+.btn--brand {
+  background: var(--color-brand);
+  color: #FFFFFF;
+}
+
+
+/* Estructura de Lotes como Filas separadas por filete de 1 px #E4DDD0 */
+.batch-list {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.batch-row {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: background 0.15s ease;
+}
+
+.batch-row:last-child {
+  border-bottom: none;
+}
+
+.batch-row:hover {
+  background: rgba(243, 239, 228, 0.4);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-ink-muted);
+  border: none;
+}
+
+.btn--ghost:hover {
+  color: var(--color-ink);
+}
+
+/* Botón chofer / móvil grande */
+.btn--driver {
+  min-height: 52px;
+  font-size: 16px;
+  font-weight: 560;
+  border-radius: 9999px;
+  width: 100%;
+  background: var(--color-brand);
+  color: #F3EFE4;
+  border: 1px solid var(--color-brand);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.btn--driver:hover {
+  opacity: 0.92;
+}
+
+/* Inputs de formulario */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.field__input,
+.field__select,
+.field__textarea {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  width: 100%;
+}
+
+.field__input:focus,
+.field__select:focus,
+.field__textarea:focus {
+  outline: none;
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgba(15, 122, 90, 0.12);
+}
+
+.field__hint {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+.field__hint--danger {
+  color: var(--color-danger-text);
+  font-weight: 500;
+}
+
+/* Alertas informativas sobrias */
+.notice-box {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.4;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.notice-box--warning {
+  border-color: rgba(217, 119, 6, 0.3);
+  color: var(--color-mostaza);
+}
+
+.notice-box--danger {
+  border-color: rgba(194, 65, 12, 0.3);
+  color: var(--color-terracota);
+}
+
+.notice-box--info {
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: var(--color-brand);
+}
+
+.demo-badge-bar {
+  background: var(--color-bosque);
+  color: #F9F8F3;
+  padding: 6px var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}

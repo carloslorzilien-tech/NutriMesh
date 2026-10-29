@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    function isAuth() { return request.auth != null; }
+    function role()   { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    function isHotel()       { return isAuth() && role() == 'hotel'; }
+    function isCoordinator() { return isAuth() && (role() == 'coordinator' || role() == 'admin'); }
+    function isAdmin()       { return isAuth() && role() == 'admin'; }
+
+    // ── Usuarios ──────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read:  if isAuth() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // ── Hoteles ───────────────────────────────────────────────────────────
+    match /hotels/{hotelId} {
+      allow read:  if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── Lotes ─────────────────────────────────────────────────────────────
+    match /batches/{batchId} {
+      // Leer: cualquier usuario autenticado
+      allow read: if isAuth();
+
+      // Crear: solo hotel (su propio hotelId) o coordinator/admin
+      allow create: if isCoordinator()
+        || (isHotel() && request.resource.data.hotelId ==
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hotelId);
+
+      // Actualizar: coordinator/admin puede todo.
+      // El hotel solo puede actualizar status SIN_EXCEDENTE en sus propios lotes.
+      // El coordinador no puede bajar de CONFIRMADO hacia atrás.
+      allow update: if isCoordinator()
+        || (isHotel()
+            && resource.data.hotelId ==
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hotelId
+            && request.resource.data.status == 'SIN_EXCEDENTE');
+
+      // ── DEMO ONLY: escritura anónima del chofer por driverToken ──────────
+      // ADVERTENCIA: Regla solo para demo. Cerrar antes de producción.
+      // Permite que un cliente sin autenticar actualice campos del chofer
+      // SOLO si envía el driverToken correcto y el lote está en CONFIRMADO.
+      allow update: if request.auth == null
+        && resource.data.status == 'CONFIRMADO'
+        && request.resource.data.driverToken == resource.data.driverToken
+        && request.resource.data.status == 'RECOGIDO'
+        && request.resource.data.keys().hasOnly([
+             'status', 'pickedUpAt', 'driverName', 'originKg', 'photoOriginUrl', 'driverToken'
+           ]);
+    }
+
+    // ── Eventos de lote ───────────────────────────────────────────────────
+    match /batches/{batchId}/events/{eventId} {
+      allow read:   if isAuth();
+      allow create: if isAuth();
+    }
+  }
+}
