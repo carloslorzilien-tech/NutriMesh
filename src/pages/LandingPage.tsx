@@ -1,14 +1,16 @@
 /**
- * LandingPage.tsx
- * Portada pública de NutriMesh — visible cuando no hay sesión activa.
+ * LandingPage.tsx — Portada pública de NutriMesh
  *
- * Reglas:
- *  - Fondo canvas #F9F8F3. Cero fondos oscuros, cero overlay sobre la foto.
- *  - Solo Inter. Sin Plus Jakarta Sans, sin fuentes mono en portada.
- *  - Verde #059669 exclusivamente en logo, botón primario y la palabra "Entrar".
- *  - Sin carrusel, sin frases de ONG, sin mencionar al Banco de Alimentos BARD.
- *  - Métricas en vivo desde Firestore (lotes RECIBIDO → acceptedKg). Sin animación.
- *  - No modifica lotes, WhatsApp, Firestore rules ni auth.
+ * Estructura de la página:
+ *  1. Barra fija de 64px (#134E3A) con isotipo blanco a 28px y botón píldora blanco "Entrar".
+ *  2. Hero asimétrico sobre fondo crema (#F9F6F1) con copia a la izquierda y cocina-acero.webp
+ *     a la derecha (radio 24px, sin overlay ni texto superpuesto).
+ *  3. Banda oscura (#134E3A) con tres cifras vivas en tipografía Outfit derivadas de Firestore
+ *     (únicamente lotes con estado RECIBIDO, mostrando supuestos honestos).
+ *  4. Dos fotografías documentales con radio 24px y pie descriptivo de una línea:
+ *     - estufa.webp: "La temperatura se anota en la cocina, no en la calle."
+ *     - cajas.webp: "El banco pesa lo que entra. Lo que no sirve se anota."
+ *  5. Pie de página minimalista.
  */
 
 import { useEffect, useState } from 'react';
@@ -16,391 +18,309 @@ import { Link } from 'react-router-dom';
 import { subscribeBatches } from '../lib/store';
 import type { Batch } from '../lib/types';
 
-/* ─── Constantes visuales ─────────────────────────────────────── */
+export default function LandingPage() {
+  const [kgRescatados, setKgRescatados] = useState(0);
 
-// Paleta — solo se usa aquí para no mezclar con el CSS de los dashboards.
-const C = {
-  canvas:   '#F9F8F3',   // fondo de toda la portada
-  ink:      '#14211C',   // texto principal
-  inkSoft:  '#5C675F',   // texto secundario
-  green:    '#059669',   // único acento: logo, botón, "Entrar"
-  border:   '#E7E3D8',   // líneas divisoras de 1 px
-} as const;
+  // Suscripción reactiva a Firestore en tiempo real (null consulta todos los lotes del sistema)
+  useEffect(() => {
+    const unsubscribe = subscribeBatches(null, (batches: Batch[]) => {
+      // Sumatoria estricta de kilogramos aceptados en almacén
+      const totalAceptado = batches
+        .filter(b => b.status === 'RECIBIDO')
+        .reduce((acumulado, b) => acumulado + (b.acceptedKg ?? 0), 0);
+      setKgRescatados(totalAceptado);
+    });
+    return () => unsubscribe();
+  }, []);
 
-/* ─── Navbar ──────────────────────────────────────────────────── */
-// Fija en la parte superior. Fondo canvas sólido, sin blur ni transparencia.
-// Izquierda: logo SVG + nombre en verde. Derecha: único botón píldora "Entrar".
-function LandingNav() {
+  // Estimaciones calculadas según supuestos operativos transparentes
+  const raciones = Math.round(kgRescatados / 0.4);
+  const co2e = Math.round(kgRescatados * 2.5 * 10) / 10;
+
   return (
-    <nav style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-      height: 60, padding: '0 40px',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      background: C.canvas,
-      borderBottom: `1px solid ${C.border}`,
-    }}>
-      {/* Logo: SVG a 28 px, sin filtros CSS — el fill #059669 ya está en el SVG */}
-      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-        <img
-          src="/logo.svg"
-          alt="NutriMesh"
-          width={28}
-          height={28}
-          style={{ objectFit: 'contain', display: 'block' }}
-        />
-        <span style={{
-          fontFamily: 'Inter, system-ui, sans-serif',
-          fontSize: 17, fontWeight: 600, color: C.green,
-          letterSpacing: '-0.02em',
-        }}>
-          NutriMesh
-        </span>
-      </Link>
+    <div style={{ minHeight: '100vh', background: 'var(--canvas)', color: 'var(--ink)' }}>
+      {/* ── 1. Barra superior fija (64px, fondo #134E3A) ── */}
+      <nav className="nav">
+        <Link to="/" className="nav-brand">
+          <img
+            src="/logo.svg"
+            alt="NutriMesh"
+            width={28}
+            height={28}
+            style={{ objectFit: 'contain', display: 'block' }}
+          />
+          <span className="nav-brand-name">NutriMesh</span>
+        </Link>
+        <Link to="/login" className="nav-btn-enter">
+          Entrar
+        </Link>
+      </nav>
 
-      {/* Botón píldora "Entrar" — único elemento a la derecha */}
-      <Link
-        to="/login"
+      {/* ── 2. Hero de dos columnas ── */}
+      <section
         style={{
-          fontFamily: 'Inter, system-ui, sans-serif',
-          fontSize: 14, fontWeight: 600,
-          background: C.green, color: '#fff',
-          padding: '8px 22px', borderRadius: 9999,
-          textDecoration: 'none',
+          paddingTop: 64,
+          minHeight: 'calc(100vh - 64px)',
+          display: 'flex',
+          alignItems: 'center',
         }}
       >
-        Entrar
-      </Link>
-    </nav>
-  );
-}
-
-/* ─── Hero ────────────────────────────────────────────────────── */
-// Dos columnas: izquierda texto (55 %), derecha foto en tarjeta (45 %).
-// Sin overlay oscuro, sin filtro sobre la imagen.
-function Hero() {
-  return (
-    <section style={{
-      paddingTop: 60,                   // compensa la navbar fija de 60 px
-      minHeight: '100vh',
-      background: C.canvas,
-      display: 'flex', alignItems: 'stretch',
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: 1280, margin: '0 auto',
-        display: 'grid',
-        gridTemplateColumns: '55fr 45fr',
-        gap: 0,
-      }}
-        className="hero-grid"           // media query en global.css lo convierte a 1 col en móvil
-      >
-        {/* Columna izquierda: copia */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          padding: 'clamp(48px, 8vw, 96px) 48px clamp(48px, 8vw, 96px) clamp(32px, 5vw, 80px)',
-        }}>
-          {/* Etiqueta pequeña de contexto */}
-          <p style={{
-            fontSize: 12, fontWeight: 600, letterSpacing: '0.08em',
-            color: C.green, textTransform: 'uppercase', marginBottom: 20,
-          }}>
-            Piloto · Santo Domingo, RD
-          </p>
-
-          {/* H1: máx. 2 líneas, tamaño fluido */}
-          <h1 style={{
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: 'clamp(40px, 6vw, 76px)',
-            fontWeight: 520,
-            letterSpacing: '-0.025em',
-            lineHeight: 1.05,
-            color: C.ink,
-            margin: '0 0 24px',
-          }}>
-            La cocina cierra.<br />El banco sale por la mañana.
-          </h1>
-
-          {/* Subtítulo 18 px en tinta suave */}
-          <p style={{
-            fontSize: 18, lineHeight: 1.6,
-            color: C.inkSoft,
-            maxWidth: 480, margin: '0 0 40px',
-          }}>
-            El hotel anota lo que nunca salió a la barra.
-            El banco lo pesa al llegar.
-          </p>
-
-          {/* Único botón primario */}
+        <div
+          className="hero-grid"
+          style={{
+            maxWidth: 1240,
+            margin: '0 auto',
+            width: '100%',
+            display: 'grid',
+            gridTemplateColumns: '55fr 45fr',
+            gap: 40,
+            padding: '48px 32px',
+            alignItems: 'center',
+          }}
+        >
+          {/* Columna de texto */}
           <div>
-            <Link
-              to="/login"
+            <p
               style={{
-                display: 'inline-block',
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: 16, fontWeight: 600,
-                background: C.green, color: '#fff',
-                padding: '14px 36px', borderRadius: 9999,
-                textDecoration: 'none',
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'var(--brand)',
+                marginBottom: 20,
               }}
             >
+              Piloto · Santo Domingo
+            </p>
+
+            <h1
+              className="t-head"
+              style={{
+                fontSize: 'clamp(38px, 5.5vw, 68px)',
+                lineHeight: 1.08,
+                color: 'var(--ink)',
+                marginBottom: 20,
+              }}
+            >
+              La cocina cierra.<br />El banco sale por la mañana.
+            </h1>
+
+            <p
+              style={{
+                fontSize: 18,
+                lineHeight: 1.6,
+                color: 'var(--ink-soft)',
+                maxWidth: 480,
+                marginBottom: 36,
+              }}
+            >
+              El hotel anota lo que nunca salió a la barra. El banco lo pesa al llegar.
+            </p>
+
+            <Link to="/login" className="btn btn-primary btn-lg">
               Entrar
             </Link>
           </div>
-        </div>
 
-        {/* Columna derecha: foto en tarjeta */}
-        <div
-          style={{
-            padding: 'clamp(32px, 5vw, 64px) clamp(32px, 5vw, 64px) clamp(32px, 5vw, 64px) 0',
-          }}
-          className="hero-photo-col"   // media query lo oculta en móvil
-        >
-          {/* Tarjeta con radio 24 px, sin overlay ni filtro */}
-          <div style={{
-            borderRadius: 24,
-            overflow: 'hidden',
-            height: '70vh',
-            minHeight: 400,
-            position: 'relative',
-          }}>
-            <img
-              src="/img/cocina-dinamica.webp"
-              alt="Cocina profesional de hotel"
-              style={{
-                width: '100%', height: '100%',
-                objectFit: 'cover', objectPosition: 'center',
-                display: 'block',
-              }}
-              // priority equivalente: cargamos sin lazy en el hero
-              loading="eager"
-            />
-          </div>
-
-          {/* Crédito de foto en 12 px */}
-          <p style={{
-            marginTop: 8, fontSize: 12,
-            color: C.inkSoft, textAlign: 'right',
-            paddingRight: 4,
-          }}>
-            Foto: Unsplash
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── Métricas en vivo ────────────────────────────────────────── */
-// Franja sobre canvas con 3 cifras calculadas desde lotes RECIBIDO.
-// Sin animación count-up — el número aparece directo.
-// "supuesto" en 12 px junto a Raciones y CO₂e.
-function LiveMetrics() {
-  const [kgTotal, setKgTotal] = useState(0);
-
-  // Suscripción en tiempo real a todos los lotes (hotelId = null = banco).
-  // Solo sumamos los lotes con status RECIBIDO y su campo acceptedKg.
-  useEffect(() => {
-    const unsub = subscribeBatches(null, (list: Batch[]) => {
-      const sum = list
-        .filter(b => b.status === 'RECIBIDO')
-        .reduce((s, b) => s + (b.acceptedKg ?? 0), 0);
-      setKgTotal(sum);
-    });
-    return () => unsub();
-  }, []);
-
-  // Cálculos derivados con supuestos honestos
-  const raciones = Math.round(kgTotal / 0.4);         // 0.4 kg por ración (supuesto)
-  const co2e     = Math.round(kgTotal * 2.5 * 10) / 10; // 2.5 kg CO₂e por kg (supuesto)
-
-  const metrics = [
-    { label: 'Kg rescatados',  value: kgTotal.toLocaleString('es-DO'),    note: null },
-    { label: 'Raciones',       value: raciones.toLocaleString('es-DO'),   note: 'supuesto' },
-    { label: 'Kg CO₂e evitado', value: co2e.toLocaleString('es-DO'),      note: 'supuesto' },
-  ];
-
-  return (
-    <section style={{
-      background: C.canvas,
-      borderTop: `1px solid ${C.border}`,
-      borderBottom: `1px solid ${C.border}`,
-      padding: '64px 40px',
-    }}>
-      <div style={{
-        maxWidth: 960, margin: '0 auto',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: 0,
-      }}
-        className="metrics-grid"
-      >
-        {metrics.map((m, i) => (
-          <div
-            key={m.label}
-            style={{
-              textAlign: 'center',
-              padding: '0 32px',
-              // Separador vertical entre cifras (no en la última)
-              borderRight: i < 2 ? `1px solid ${C.border}` : 'none',
-            }}
-          >
-            {/* Cifra principal — tabular-nums para alineación */}
-            <p style={{
-              fontFamily: 'Inter, system-ui, sans-serif',
-              fontSize: 'clamp(40px, 5vw, 64px)',
-              fontWeight: 600,
-              fontVariantNumeric: 'tabular-nums',
-              color: C.green,
-              lineHeight: 1,
-              marginBottom: 8,
-            }}>
-              {m.value}
-            </p>
-
-            {/* Etiqueta de la métrica */}
-            <p style={{ fontSize: 14, fontWeight: 500, color: C.inkSoft, marginBottom: 4 }}>
-              {m.label}
-            </p>
-
-            {/* "supuesto" en 12 px — solo aparece si aplica */}
-            {m.note && (
-              <p style={{ fontSize: 12, color: C.inkSoft, opacity: 0.6 }}>
-                {m.note}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ─── Cómo funciona ───────────────────────────────────────────── */
-// Tres pasos en línea con número grande en verde, título y descripción corta.
-// Conector visual entre pasos mediante borde superior.
-function ComoFunciona() {
-  const steps = [
-    {
-      num: '01',
-      title: 'Publica',
-      desc: 'El chef anota categoría, kg y temperatura de origen al cierre.',
-    },
-    {
-      num: '02',
-      title: 'Transporta',
-      desc: 'El banco confirma la ventana y genera el enlace del chofer.',
-    },
-    {
-      num: '03',
-      title: 'Entrega',
-      desc: 'El banco pesa en su almacén y cierra el lote con el kg aceptado.',
-    },
-  ];
-
-  return (
-    <section id="como-funciona" style={{
-      background: C.canvas,
-      padding: '80px 40px',
-    }}>
-      <div style={{ maxWidth: 960, margin: '0 auto' }}>
-        {/* Título de sección */}
-        <p style={{
-          fontSize: 12, fontWeight: 600, letterSpacing: '0.08em',
-          color: C.green, textTransform: 'uppercase', marginBottom: 16,
-        }}>
-          Cómo funciona
-        </p>
-        <h2 style={{
-          fontFamily: 'Inter, system-ui, sans-serif',
-          fontSize: 'clamp(28px, 4vw, 44px)',
-          fontWeight: 520, letterSpacing: '-0.02em',
-          color: C.ink, margin: '0 0 56px',
-        }}>
-          Una cadena de tres pasos.
-        </h2>
-
-        {/* Pasos en línea */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 0,
-        }}
-          className="steps-grid"
-        >
-          {steps.map((s, i) => (
+          {/* Columna de fotografía hero (cocina-acero.webp) */}
+          <div className="hero-photo-col">
             <div
-              key={s.num}
               style={{
-                padding: '32px 32px 32px 0',
-                // Separador a la izquierda (excepto el primero)
-                borderLeft: i > 0 ? `1px solid ${C.border}` : 'none',
-                paddingLeft: i > 0 ? 32 : 0,
+                borderRadius: 'var(--radius-photo)',
+                overflow: 'hidden',
+                height: '70vh',
+                minHeight: 440,
+                maxHeight: 640,
+                background: 'var(--surface)',
+                boxShadow: 'var(--shadow-card)',
               }}
             >
-              {/* Número grande en verde */}
-              <p style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: 48, fontWeight: 600,
-                color: C.green, lineHeight: 1,
-                marginBottom: 16,
-                fontVariantNumeric: 'tabular-nums',
-              }}>
-                {s.num}
-              </p>
-              <h3 style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: 20, fontWeight: 600,
-                color: C.ink, marginBottom: 10,
-              }}>
-                {s.title}
-              </h3>
-              <p style={{ fontSize: 15, lineHeight: 1.6, color: C.inkSoft }}>
-                {s.desc}
-              </p>
+              <img
+                src="/img/cocina-acero.webp"
+                alt="Cocina profesional de acero inoxidable en hotel"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+                loading="eager"
+              />
             </div>
-          ))}
+            <p
+              style={{
+                fontSize: 12,
+                color: 'var(--ink-soft)',
+                marginTop: 8,
+                textAlign: 'right',
+                paddingRight: 4,
+              }}
+            >
+              Foto: Ceba Solutions, Unsplash.
+            </p>
+          </div>
         </div>
-      </div>
-    </section>
-  );
-}
+      </section>
 
-/* ─── Footer ──────────────────────────────────────────────────── */
-// Mínimo: logo + nombre + texto de contexto.
-function Footer() {
-  return (
-    <footer style={{
-      background: C.canvas,
-      borderTop: `1px solid ${C.border}`,
-      padding: '32px 40px',
-      display: 'flex', alignItems: 'center', gap: 12,
-    }}>
-      <img src="/logo.svg" alt="NutriMesh" width={20} height={20} style={{ objectFit: 'contain' }} />
-      <span style={{ fontSize: 13, color: C.inkSoft }}>
-        NutriMesh · Piloto operativo Santo Domingo, RD
-      </span>
-    </footer>
-  );
-}
+      {/* ── 3. Banda de cifras en vivo (#134E3A, cifras en Outfit blancas) ── */}
+      <section style={{ background: 'var(--bar)', padding: '56px 32px' }}>
+        <div
+          style={{
+            maxWidth: 1040,
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 32,
+            textAlign: 'center',
+          }}
+        >
+          {/* Kilogramos rescatados */}
+          <div>
+            <p
+              className="t-head mono"
+              style={{
+                fontSize: 'clamp(42px, 5vw, 60px)',
+                color: '#FFFFFF',
+                lineHeight: 1,
+                marginBottom: 8,
+              }}
+            >
+              {kgRescatados.toLocaleString('es-DO')}
+            </p>
+            <p style={{ fontSize: 14, color: 'rgba(255, 255, 255, 0.85)' }}>
+              Kg rescatados
+            </p>
+          </div>
 
-/* ─── Página completa ─────────────────────────────────────────── */
-export default function LandingPage() {
-  return (
-    <div style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-      {/* Navbar fija */}
-      <LandingNav />
+          {/* Raciones estimadas */}
+          <div>
+            <p
+              className="t-head mono"
+              style={{
+                fontSize: 'clamp(42px, 5vw, 60px)',
+                color: '#FFFFFF',
+                lineHeight: 1,
+                marginBottom: 8,
+              }}
+            >
+              {raciones.toLocaleString('es-DO')}
+            </p>
+            <p style={{ fontSize: 14, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 4 }}>
+              Raciones
+            </p>
+            <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.7)' }}>
+              supuesto
+            </p>
+          </div>
 
-      {/* Hero de dos columnas */}
-      <Hero />
+          {/* Huella de CO₂e evitada */}
+          <div>
+            <p
+              className="t-head mono"
+              style={{
+                fontSize: 'clamp(42px, 5vw, 60px)',
+                color: '#FFFFFF',
+                lineHeight: 1,
+                marginBottom: 8,
+              }}
+            >
+              {co2e.toLocaleString('es-DO')}
+            </p>
+            <p style={{ fontSize: 14, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 4 }}>
+              Kg CO₂e evitado
+            </p>
+            <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.7)' }}>
+              supuesto
+            </p>
+          </div>
+        </div>
+      </section>
 
-      {/* Tres cifras en vivo */}
-      <LiveMetrics />
+      {/* ── 4. Dos fotografías de trazabilidad documental sobre crema ── */}
+      <section style={{ padding: '80px 32px', background: 'var(--canvas)' }}>
+        <div
+          className="photos-grid"
+          style={{
+            maxWidth: 1100,
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 40,
+          }}
+        >
+          {/* Fotografía 1: Estufa (medición en origen) */}
+          <div>
+            <div
+              style={{
+                borderRadius: 'var(--radius-photo)',
+                overflow: 'hidden',
+                height: 380,
+                background: 'var(--surface)',
+                boxShadow: 'var(--shadow-card)',
+              }}
+            >
+              <img
+                src="/img/estufa.webp"
+                alt="Estufa industrial de cocina profesional"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+                loading="lazy"
+              />
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginTop: 14, lineHeight: 1.5 }}>
+              La temperatura se anota en la cocina, no en la calle.
+            </p>
+          </div>
 
-      {/* Sección "Cómo funciona" */}
-      <ComoFunciona />
+          {/* Fotografía 2: Cajas (pesaje y recepción) */}
+          <div>
+            <div
+              style={{
+                borderRadius: 'var(--radius-photo)',
+                overflow: 'hidden',
+                height: 380,
+                background: 'var(--surface)',
+                boxShadow: 'var(--shadow-card)',
+              }}
+            >
+              <img
+                src="/img/cajas.webp"
+                alt="Cajas de alimentos clasificadas y verificadas"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+                loading="lazy"
+              />
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginTop: 14, lineHeight: 1.5 }}>
+              El banco pesa lo que entra. Lo que no sirve se anota.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      {/* Pie de página */}
-      <Footer />
+      {/* ── 5. Pie de página ── */}
+      <footer
+        style={{
+          borderTop: '1px solid var(--border)',
+          padding: '28px 32px',
+          background: 'var(--canvas)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
+          NutriMesh · Piloto operativo · Santo Domingo, RD
+        </span>
+      </footer>
     </div>
   );
 }
