@@ -2,22 +2,22 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getBatchByToken, updateBatch } from '../lib/demo';
 
-type Step = 'detail' | 'arrived' | 'pickup' | 'done' | 'notfound';
+type Step = 'detail' | 'done' | 'notfound';
 
 export default function DriverView() {
   const { token } = useParams<{ token: string }>();
   const batch = getBatchByToken(token ?? '');
   const [step, setStep] = useState<Step>(batch ? 'detail' : 'notfound');
-  const [tempC, setTempC] = useState('');
-  const [kg, setKg] = useState('');
-  const [tempErr, setTempErr] = useState('');
+  const [packagingOk, setPackagingOk] = useState(false);
+  const [driverKg, setDriverKg] = useState('');
+  const [err, setErr] = useState('');
 
   if (step === 'notfound') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center' }}>
           <img src="/logo.svg" alt="NutriMesh" width={48} style={{ marginBottom: 16 }} />
-          <p style={{ fontSize: 16, color: 'var(--ink-soft)' }}>Pickup link not found.</p>
+          <p style={{ fontSize: 16, color: 'var(--ink-soft)' }}>Enlace de recogida no encontrado.</p>
         </div>
       </div>
     );
@@ -25,15 +25,16 @@ export default function DriverView() {
 
   if (!batch) return null;
 
-  const confirmPickup = () => {
-    const t = parseFloat(tempC);
-    const k = parseFloat(kg);
-    if (isNaN(t) || t > 4) {
-      setTempErr('Temperature must be 4 °C or below before loading.');
-      return;
-    }
-    setTempErr('');
-    updateBatch(batch.id, { status: 'in_transit', receivedKg: isNaN(k) ? batch.kg : k });
+  const confirm = () => {
+    setErr('');
+    const k = parseFloat(driverKg);
+    if (!packagingOk) { setErr('Confirma que el empaque está cerrado.'); return; }
+    if (isNaN(k) || k <= 0) { setErr('Ingresa los kg que te llevas.'); return; }
+    updateBatch(batch.id, {
+      status: 'RECOGIDO',
+      driverKg: k,
+      packagingOk: true,
+    });
     setStep('done');
   };
 
@@ -41,50 +42,70 @@ export default function DriverView() {
     <div style={{ minHeight: '100vh', background: 'var(--canvas)', display: 'flex', flexDirection: 'column', padding: '32px 24px', boxSizing: 'border-box' }}>
       <div style={{ maxWidth: 440, width: '100%', margin: '0 auto' }}>
 
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36 }}>
-          <img src="/logo.svg" alt="NutriMesh" width={36} style={{ objectFit: 'contain' }} />
-          <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--green)' }}>NutriMesh</span>
+        {/* Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
+          <img src="/logo.svg" alt="NutriMesh" width={32} style={{ objectFit: 'contain' }} />
+          <span style={{ fontSize: 18, fontWeight: 520, color: 'var(--green)' }}>NutriMesh</span>
         </div>
 
         {step === 'detail' && (
           <>
-            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Pickup order</p>
-            <h1 style={{ fontSize: 28, fontWeight: 560, letterSpacing: '-0.02em', marginBottom: 8 }}>{batch.item}</h1>
+            {/* Item name — big */}
+            <h1 style={{ fontSize: 32, fontWeight: 560, letterSpacing: '-0.02em', marginBottom: 10, lineHeight: 1.15 }}>
+              {batch.item}
+            </h1>
+
+            {/* Mono data line */}
             <p className="mono" style={{ fontSize: 16, color: 'var(--ink-soft)', marginBottom: 8 }}>
-              {batch.kg} kg · {batch.tempC} °C · tomorrow {batch.pickupWindow}
+              {batch.kg} kg · {batch.tempC} °C · {batch.pickupWindow}
             </p>
-            <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginBottom: 32 }}>{batch.hotelName}</p>
-            <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={() => setStep('arrived')}>
-              I have arrived
-            </button>
-          </>
-        )}
 
-        {step === 'arrived' && (
-          <>
-            <h1 style={{ fontSize: 24, fontWeight: 560, marginBottom: 8 }}>{batch.item}</h1>
-            <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)', marginBottom: 28 }}>{batch.hotelName}</p>
+            {/* Temp note */}
+            <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginBottom: 8 }}>
+              Temperatura medida en el hotel. No la tomes tú.
+            </p>
 
-            <div className="stack stack-md" style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginBottom: 32 }}>
+              {batch.hotelName}
+            </p>
+
+            <div className="stack stack-md">
+              {/* Packaging checkbox */}
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', fontSize: 15 }}>
+                <input
+                  type="checkbox"
+                  checked={packagingOk}
+                  onChange={e => setPackagingOk(e.target.checked)}
+                  style={{ width: 20, height: 20, marginTop: 2, accentColor: 'var(--green)', flexShrink: 0 }}
+                />
+                Empaque cerrado, sin daño visible
+              </label>
+
+              {/* Kg field */}
               <div className="field">
-                <label>Temperature at loading (°C)</label>
-                <input type="number" step="0.5" value={tempC} onChange={e => setTempC(e.target.value)} placeholder="3" />
+                <label>Kg que me llevo</label>
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={driverKg}
+                  onChange={e => setDriverKg(e.target.value)}
+                  placeholder={String(batch.kg)}
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 18 }}
+                />
               </div>
-              <div className="field">
-                <label>Confirmed weight (kg)</label>
-                <input type="number" step="0.5" value={kg} onChange={e => setKg(e.target.value)} placeholder={String(batch.kg)} />
-              </div>
+
+              {err && <p className="notice">{err}</p>}
+
+              {/* 52px button */}
+              <button
+                className="btn btn-primary btn-lg"
+                style={{ width: '100%', height: 52 }}
+                onClick={confirm}
+              >
+                Recogido
+              </button>
             </div>
-
-            {parseFloat(tempC) > 4 && (
-              <p className="notice" style={{ marginBottom: 16 }}>Temperature above 4 °C. Do not load. Contact the bank.</p>
-            )}
-            {tempErr && <p className="notice" style={{ marginBottom: 16 }}>{tempErr}</p>}
-
-            <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={confirmPickup}>
-              Mark as picked up
-            </button>
           </>
         )}
 
@@ -95,9 +116,9 @@ export default function DriverView() {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h2 style={{ fontSize: 22, fontWeight: 560, marginBottom: 8 }}>Pickup recorded</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 560, marginBottom: 8 }}>Recogida registrada</h2>
             <p style={{ fontSize: 15, color: 'var(--ink-soft)' }}>
-              Drive to the food bank. The coordinator is expecting you.
+              Ve al banco de alimentos. El coordinador te espera.
             </p>
           </div>
         )}
