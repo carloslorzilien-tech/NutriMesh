@@ -4,14 +4,15 @@ import type { Batch } from '../lib/types';
 interface Props {
   batch: Batch;
   onClick?: () => void;
+  selected?: boolean;
 }
 
-export default function BatchRow({ batch, onClick }: Props) {
+export default function BatchRow({ batch, onClick, selected }: Props) {
   const tempAlert = batch.originTempC > 4;
 
   return (
     <div
-      className="batch-row"
+      className={`batch-row${selected ? ' is-selected' : ''}`}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
       onClick={onClick}
     >

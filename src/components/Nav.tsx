@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useActivity } from '../context/ActivityContext';
 import { IS_FIREBASE } from '../lib/firebase';
-import logoPng from '../assets/logo.png';
+
+// Use the SVG directly — no PNG, no white rectangle
+const LOGO_SRC = '/logo.svg';
 
 export default function Nav() {
   const { user, logout } = useAuth();
@@ -20,16 +22,25 @@ export default function Nav() {
     <>
       <nav className="nav">
         <Link to="/" className="nav-brand">
-          <img src={logoPng} alt="NutriMesh" width={32} height={32} style={{ objectFit: 'contain', flexShrink: 0 }} />
+          {/* SVG logo: 40 px height, same green as the text, no box, no shadow */}
+          <img
+            src={LOGO_SRC}
+            alt="NutriMesh"
+            width={40}
+            height={40}
+            style={{ objectFit: 'contain', flexShrink: 0, display: 'block' }}
+          />
           <span className="nav-brand-name">NutriMesh</span>
         </Link>
 
         <div className="nav-links">
+          {/* DEMO indicator — only shown in memory mode (no .env) */}
           {!IS_FIREBASE && (
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', letterSpacing: '0.06em' }}>DEMO</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', letterSpacing: '0.06em' }}>
+              DEMO
+            </span>
           )}
 
-          {/* Activity button */}
           {user && (
             <button
               className="nav-link-action"
@@ -41,7 +52,7 @@ export default function Nav() {
               {lines.length > 0 && (
                 <span style={{
                   position: 'absolute', top: -4, right: -8,
-                  width: 7, height: 7, borderRadius: '50%',
+                  width: 6, height: 6, borderRadius: '50%',
                   background: 'var(--green)',
                 }} />
               )}
@@ -56,17 +67,17 @@ export default function Nav() {
         </div>
       </nav>
 
-      {/* Activity drawer */}
+      {/* Activity panel — inline below nav, not a floating blob */}
       {open && user && (
         <div
           style={{
-            position: 'fixed', top: 60, right: 0, width: 320,
+            position: 'fixed', top: 40, right: 0, width: 300,
             background: 'var(--surface)', borderLeft: '1px solid var(--border)',
             borderBottom: '1px solid var(--border)', zIndex: 200,
-            padding: '16px 20px', boxShadow: '-4px 4px 16px rgba(0,0,0,0.06)',
+            padding: '14px 18px',
           }}
         >
-          <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', letterSpacing: '0.06em', marginBottom: 12 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', letterSpacing: '0.06em', marginBottom: 10 }}>
             ACTIVIDAD
           </p>
           {lines.length === 0 ? (
@@ -80,7 +91,7 @@ export default function Nav() {
           )}
           <button
             onClick={() => setOpen(false)}
-            style={{ marginTop: 16, background: 'none', border: 'none', fontSize: 12, color: 'var(--ink-soft)', cursor: 'pointer', padding: 0 }}
+            style={{ marginTop: 12, background: 'none', border: 'none', fontSize: 12, color: 'var(--ink-soft)', cursor: 'pointer', padding: 0 }}
           >
             Cerrar
           </button>

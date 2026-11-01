@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import logoPng from '../assets/logo.png';
+
+// SVG logo — 96 px, centered, no white box
+const LOGO_SRC = '/logo.svg';
 
 const DEMOS = [
   { label: 'Gran Hotel Europa', email: 'hotel.europa@nutrimesh.dev' },
@@ -23,7 +25,6 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      // navigation is handled or determined by role/email
       if (email.trim().includes('bard')) {
         navigate('/banco');
       } else {
@@ -44,10 +45,18 @@ export default function Login() {
 
   return (
     <div className="login-wrap">
-      {/* Brand logo — 32 px, no pill */}
-      <div style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <img src={logoPng} alt="NutriMesh" width={32} height={32} style={{ objectFit: 'contain' }} />
-        <span style={{ fontSize: 18, fontWeight: 520, color: 'var(--green)' }}>NutriMesh</span>
+      {/* Logo — 96 px, centered, plenty of air */}
+      <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        <img
+          src={LOGO_SRC}
+          alt="NutriMesh"
+          width={96}
+          height={96}
+          style={{ objectFit: 'contain', display: 'block' }}
+        />
+        <span style={{ fontSize: 22, fontWeight: 600, color: 'var(--green)', letterSpacing: '-0.02em' }}>
+          NutriMesh
+        </span>
       </div>
 
       <div className="login-box">

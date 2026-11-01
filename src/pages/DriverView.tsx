@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom';
 import { subscribeBatchByToken, updateBatchFields } from '../lib/store';
 import { IS_FIREBASE } from '../lib/firebase';
 import type { Batch } from '../lib/types';
-import logoPng from '../assets/logo.png';
+// SVG logo — no PNG import, no white box
+const LOGO_SRC = '/logo.svg';
 
 export default function DriverView() {
   const { token } = useParams<{ token: string }>();
@@ -35,7 +36,7 @@ export default function DriverView() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center' }}>
-          <img src={logoPng} alt="NutriMesh" width={32} height={32} style={{ marginBottom: 16 }} />
+          <img src={LOGO_SRC} alt="NutriMesh" width={32} height={32} style={{ marginBottom: 16 }} />
           <p style={{ fontSize: 16, color: 'var(--ink-soft)' }}>Enlace de recogida no encontrado.</p>
         </div>
       </div>
@@ -73,7 +74,7 @@ export default function DriverView() {
 
         {/* Logo 32 px sin píldora */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36 }}>
-          <img src={logoPng} alt="NutriMesh" width={32} height={32} style={{ objectFit: 'contain' }} />
+          <img src={LOGO_SRC} alt="NutriMesh" width={32} height={32} style={{ objectFit: 'contain' }} />
           <span style={{ fontSize: 18, fontWeight: 520, color: 'var(--green)' }}>NutriMesh</span>
         </div>
 
