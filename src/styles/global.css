@@ -1,21 +1,47 @@
-/* NutriMesh — Global CSS */
-/* Tokens */
+/**
+ * global.css — NutriMesh
+ *
+ * Sistema de diseño base para los paneles autenticados (hotel, banco, chofer).
+ * La portada (LandingPage) y el login usan sus propios estilos inline,
+ * pero comparten los tokens de color definidos aquí.
+ *
+ * Reglas:
+ *  - Un solo acento: --green (#059669). Naranja solo para urgencia en lotes.
+ *  - Sin fuentes mono en portada/login. El panel interno usa --font-mono solo
+ *    donde hay datos tabulares (temperaturas, kg, horas).
+ *  - Sin sombras: separa con borde 1 px y espacio múltiplo de 8 px.
+ *  - Radios: tarjetas 24 px, botones en píldora (9999 px), inputs 8 px.
+ *  - Foco visible: anillo verde en todos los elementos interactivos.
+ */
+
+/* ─── Tokens globales ─────────────────────────────────────────── */
 :root {
-  --canvas:   #F9F8F3;
-  --surface:  #FFFFFF;
-  --ink:      #14211C;
-  --ink-soft: #5C675F;
-  --green:    #059669;
-  --mustard:  #D97706;
-  --terra:    #C2410C;
-  --border:   #E4DDD0;
-  --font-ui:  'Inter', system-ui, sans-serif;
-  --font-mono:'IBM Plex Mono', 'Courier New', monospace;
+  --canvas:    #F9F8F3; /* fondo base de toda la app */
+  --surface:   #FFFFFF; /* fondo de tarjetas y formularios */
+  --border:    #E7E3D8; /* líneas divisoras de 1 px */
+  --ink:       #14211C; /* texto principal */
+  --ink-soft:  #5C675F; /* texto secundario y etiquetas */
+  --green:     #059669; /* único acento: logo, botón primario, estado activo */
+  --urgent:    #F2762E; /* urgencia — solo en chips de estado en lotes, nunca decorativo */
+  --error:     #B91C1C; /* errores de validación */
+
+  /* Tipografía — solo Inter. Sin mono en portada/login. */
+  --font-ui:   'Inter', system-ui, sans-serif;
+  /* Mono solo para datos tabulares en paneles internos */
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ─── Reset base ──────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-html { font-size: 16px; }
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
 
 body {
   font-family: var(--font-ui);
@@ -29,28 +55,39 @@ a { color: inherit; text-decoration: none; }
 button { cursor: pointer; font-family: var(--font-ui); }
 input, select, textarea { font-family: var(--font-ui); }
 
-/* Utility */
-.mono { font-family: var(--font-mono); }
-.ink-soft { color: var(--ink-soft); }
-.green { color: var(--green); }
-.mustard { color: var(--mustard); font-size: 13px; font-weight: 500; }
-.terra { color: var(--terra); font-size: 13px; font-weight: 500; }
+/* ─── Foco visible — anillo verde en todos los interactivos ───── */
+/* Cumple AA de accesibilidad. Se usa :focus-visible para no molestar al mouse. */
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
-/* Buttons */
+/* ─── Utilities ───────────────────────────────────────────────── */
+.mono      { font-family: var(--font-mono); }
+.ink-soft  { color: var(--ink-soft); }
+.green     { color: var(--green); }
+/* Urgencia — solo para chips de estado en lotes que necesitan atención */
+.urgent    { color: var(--urgent); font-size: 13px; font-weight: 500; }
+.error-txt { color: var(--error);  font-size: 13px; font-weight: 500; }
+
+/* ─── Botones del panel interno ───────────────────────────────── */
+/* La portada y el login usan estilos inline para no acoplar estilos. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 6px;
+  border-radius: 9999px; /* píldora */
   font-size: 15px;
   font-weight: 500;
   padding: 0 20px;
   height: 44px;
   transition: opacity 0.15s;
+  font-family: var(--font-ui);
 }
-.btn:hover { opacity: 0.88; }
-.btn:active { opacity: 0.75; }
+.btn:hover    { opacity: 0.88; }
+.btn:active   { opacity: 0.75; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-primary {
@@ -62,16 +99,16 @@ input, select, textarea { font-family: var(--font-ui); }
   color: var(--green);
   border: 1px solid var(--green);
 }
-.btn-lg { height: 52px; font-size: 16px; border-radius: 8px; }
+.btn-lg { height: 52px; font-size: 16px; }
 
-/* Form */
+/* ─── Campos de formulario (paneles internos) ─────────────────── */
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 13px; color: var(--ink-soft); font-weight: 500; }
 .field input,
 .field select {
   height: 44px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0 12px;
   font-size: 15px;
   color: var(--ink);
@@ -81,16 +118,19 @@ input, select, textarea { font-family: var(--font-ui); }
 }
 .field input:focus,
 .field select:focus { border-color: var(--green); }
-.field-error { font-size: 13px; color: var(--terra); margin-top: 2px; }
+.field-error { font-size: 13px; color: var(--error); margin-top: 2px; }
 
-/* Batch row */
+/* ─── Fila de lote (BatchRow) ─────────────────────────────────── */
 .batch-row {
   padding: 14px 0;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
+  transition: background 0.1s;
 }
-.batch-row:hover { background: rgba(5,150,105,0.03); }
+.batch-row:hover { background: rgba(5, 150, 105, 0.03); }
 .batch-row:first-child { border-top: 1px solid var(--border); }
+.batch-row.is-selected { background: rgba(5, 150, 105, 0.06); }
+
 .batch-row-name {
   display: flex;
   align-items: baseline;
@@ -101,6 +141,7 @@ input, select, textarea { font-family: var(--font-ui); }
   color: var(--ink);
   margin-bottom: 4px;
 }
+/* Datos tabulares: kg, °C, ventana — en mono para alineación */
 .batch-row-meta {
   font-family: var(--font-mono);
   font-size: 13px;
@@ -111,22 +152,19 @@ input, select, textarea { font-family: var(--font-ui); }
   font-size: 13px;
   color: var(--ink-soft);
 }
-.batch-row.is-selected {
-  background: rgba(5,150,105,0.06);
-}
-.status-label {
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.status-publicado    { color: var(--green); }
-.status-confirmado   { color: var(--mustard); }
-.status-recogido     { color: var(--ink-soft); }
-.status-recibido     { color: var(--green); }
-.status-rechazado    { color: var(--terra); }
-.status-sin-excedente{ color: var(--ink-soft); }
 
-/* Nav — 40 px de alto */
+/* ─── Chips de estado ─────────────────────────────────────────── */
+/* Verde = ok/aceptado. Urgente (naranja) = requiere acción. Suave = neutral. */
+.status-label      { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.status-publicado  { color: var(--green); }
+.status-confirmado { color: var(--urgent); }  /* requiere acción del banco */
+.status-recogido   { color: var(--ink-soft); }
+.status-recibido   { color: var(--green); }
+.status-rechazado  { color: var(--error); }
+.status-sin-excedente { color: var(--ink-soft); }
+
+/* ─── Nav del panel autenticado ───────────────────────────────── */
+/* 40 px de alto. Fondo canvas, sin blur ni sombra. */
 .nav {
   width: 100%;
   height: 40px;
@@ -135,6 +173,7 @@ input, select, textarea { font-family: var(--font-ui); }
   align-items: center;
   justify-content: space-between;
   background: var(--canvas);
+  border-bottom: 1px solid var(--border);
 }
 .nav-brand {
   display: flex;
@@ -143,7 +182,7 @@ input, select, textarea { font-family: var(--font-ui); }
   text-decoration: none;
 }
 .nav-brand-name {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--green);
   letter-spacing: -0.02em;
@@ -160,6 +199,7 @@ input, select, textarea { font-family: var(--font-ui); }
   transition: color 0.15s;
 }
 .nav-link:hover { color: var(--ink); }
+/* Acción en verde (Actividad, Salir) — sin border, sin background */
 .nav-link-action {
   font-size: 14px;
   color: var(--green);
@@ -167,9 +207,11 @@ input, select, textarea { font-family: var(--font-ui); }
   background: none;
   border: none;
   cursor: pointer;
+  font-family: var(--font-ui);
 }
 
-/* Bank header bar — 40 px */
+/* ─── Barra de estadísticas del banco ────────────────────────── */
+/* Franja verde de 40 px con cifras en vivo */
 .bank-bar {
   background: var(--green);
   color: #fff;
@@ -179,33 +221,21 @@ input, select, textarea { font-family: var(--font-ui); }
   align-items: center;
   gap: 28px;
 }
-.bank-bar-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.bank-bar-num {
-  font-family: var(--font-mono);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1;
-}
-.bank-bar-label {
-  font-size: 11px;
-  opacity: 0.85;
-}
+.bank-bar-stat  { display: flex; align-items: baseline; gap: 6px; }
+.bank-bar-num   { font-family: var(--font-mono); font-size: 15px; font-weight: 600; }
+.bank-bar-label { font-size: 11px; opacity: 0.85; }
 
-/* Section title */
+/* ─── Título de sección ───────────────────────────────────────── */
 .section-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-soft);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  margin-bottom: 0;
 }
 
-/* Two-column layout for bank and hotel */
+/* ─── Layout de dos columnas (hotel / banco) ──────────────────── */
+/* Lista a la izquierda. Expediente sticky a la derecha. */
 .two-col {
   display: grid;
   grid-template-columns: 1fr 340px;
@@ -232,61 +262,21 @@ input, select, textarea { font-family: var(--font-ui); }
   .col-detail { display: none; }
 }
 
-/* Page wrappers */
-.page {
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 0 24px 64px;
-}
-.page-wide {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 24px 64px;
-}
+/* ─── Wrappers de página ──────────────────────────────────────── */
+.page      { max-width: 680px; margin: 0 auto; padding: 0 24px 64px; }
+.page-wide { max-width: 900px; margin: 0 auto; padding: 0 24px 64px; }
 
-/* Login */
-.login-wrap {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 20px;
-}
-.login-box {
-  width: 100%;
-  max-width: 360px;
-}
-
-/* Demo link */
-.demo-link {
-  background: none;
-  border: none;
-  color: var(--green);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* Notice — color solo en texto, sin banda de fondo */
-.notice {
-  font-size: 13px;
-  color: var(--terra);
-}
-
-/* Divider */
+/* ─── Divisor ─────────────────────────────────────────────────── */
 .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 
-/* Stack helpers */
-.stack { display: flex; flex-direction: column; }
+/* ─── Helpers de espaciado vertical ──────────────────────────── */
+.stack    { display: flex; flex-direction: column; }
 .stack-sm { gap: 8px; }
 .stack-md { gap: 16px; }
 .stack-lg { gap: 24px; }
 
-/* Timeline step */
-.timeline { display: flex; flex-direction: column; gap: 0; }
+/* ─── Timeline de estados (expediente del lote) ───────────────── */
+.timeline      { display: flex; flex-direction: column; gap: 0; }
 .timeline-step {
   display: flex;
   gap: 12px;
@@ -295,21 +285,16 @@ input, select, textarea { font-family: var(--font-ui); }
 }
 .timeline-step:last-child { border-bottom: none; }
 .timeline-dot {
-  width: 8px;
-  height: 8px;
+  width: 8px; height: 8px;
   border-radius: 50%;
   background: var(--border);
   flex-shrink: 0;
   margin-top: 5px;
 }
-.timeline-dot.done { background: var(--green); }
-.timeline-body { flex: 1; }
-.timeline-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--ink-soft);
-}
-.timeline-label.done { color: var(--ink); font-weight: 520; }
+.timeline-dot.done      { background: var(--green); }
+.timeline-body          { flex: 1; }
+.timeline-label         { font-size: 14px; font-weight: 500; color: var(--ink-soft); }
+.timeline-label.done    { color: var(--ink); font-weight: 520; }
 .timeline-time {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -317,32 +302,56 @@ input, select, textarea { font-family: var(--font-ui); }
   margin-top: 2px;
 }
 
-/* ─── Landing / Login dark pages ─────────────────────────────── */
+/* ─── Responsive: portada ─────────────────────────────────────── */
 
-/* Show photo column in login on desktop */
+/* Hero — 2 columnas → 1 columna en móvil */
+@media (max-width: 768px) {
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .hero-photo-col {
+    display: none !important;
+  }
+}
+
+/* Métricas — 3 columnas → 1 columna en móvil */
+@media (max-width: 600px) {
+  .metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .metrics-grid > div {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    padding: 24px 0 !important;
+  }
+  .metrics-grid > div:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Pasos — 3 columnas → 1 columna en móvil */
+@media (max-width: 640px) {
+  .steps-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .steps-grid > div {
+    border-left: none !important;
+    border-top: 1px solid var(--border);
+    padding-left: 0 !important;
+  }
+  .steps-grid > div:first-child {
+    border-top: none;
+  }
+}
+
+/* Login — columna foto visible solo en ≥ 768 px */
 @media (min-width: 768px) {
   .login-photo-col {
     display: block !important;
   }
 }
 
-/* JetBrains Mono fallback */
-.font-mono-jet {
-  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
-}
-
-/* Focus ring for dark backgrounds */
-.dark-focus:focus-visible {
-  outline: 2px solid #10B981;
-  outline-offset: 3px;
-}
-
-/* Smooth scroll */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Respect reduced-motion */
+/* ─── Respeta prefers-reduced-motion ──────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

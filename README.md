@@ -1,48 +1,73 @@
-# NutriMesh
+# NutriMesh — Piloto Operativo
 
-Pickup coordination between hotel kitchens and a food bank in Santo Domingo. Not a marketplace.
+Red logística entre cocinas de hoteles y bancos de alimentos en Santo Domingo, RD.
 
-Hotels log two kinds of surplus at the end of service. The food bank confirms a morning pickup. The driver opens one link, with no account. The bank weighs what actually arrived and can reject the batch.
+## Cómo ejecutar en local
 
-The hotels and the food bank in this build are a simulated pilot, not signed partners.
-
-## What can be logged
-
-Only food that never met a guest.
-
-- Sealed store-room goods nearing their date: produce not yet prepped, dairy, meat, or dry goods still in their package.
-- Kitchen production that stayed in the back of house, cooled and held at 4 °C or below.
-
-Buffet food, anything from a guest plate, and infant formula cannot be logged. A batch can still be rejected on arrival for temperature, smell, packaging, or date.
-
-## How a batch moves
-
-The hotel publishes at close. The bank confirms a morning window. The driver marks the pickup. The bank enters the real weight and accepts or rejects.
-
-Hot buffet is out of scope. A truck is not sent at midnight.
-
-## Stack
-
-React, TypeScript, Vite. Styles are plain CSS. Firebase Auth and Firestore when `.env` is present. Without `.env`, the same flow runs in memory so the demo still works.
-
-## Run
-
-```
-git clone https://github.com/carloslorzilien-tech/NutriMesh.git
-cd NutriMesh
+```bash
+cp .env.example .env   # rellena las variables de Firebase
 npm install
-npm run dev
+npm run dev            # http://localhost:5173
 ```
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Hotel Europa | hotel.europa@nutrimesh.dev | demo1234 |
-| Barceló | barcelo@nutrimesh.dev | demo1234 |
-| Food bank | coordinador@bard.org.do | demo1234 |
-| Driver | no account | /c/:token |
+## Variables de entorno
 
-Meal counts use 0.4 kg each. Carbon figures use 2.5 kg CO₂e per kilo rescued. Both are labeled assumptions, not measurements.
+Crea un archivo `.env` en la raíz con las credenciales de Firebase:
 
-## Status
+```
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+```
 
-Working prototype for STEMergent Hacks 2026. The script for the two-minute demo is in demo.md.
+Si el `.env` no existe la app arranca en **modo memoria**: los datos no se
+persisten entre recargas pero el flujo completo es navegable.
+
+## Despliegue en Vercel
+
+1. Configura las mismas variables en *Settings → Environment Variables*.
+2. Asegúrate de que el dominio de Vercel esté autorizado en Firebase:
+   - Firebase Console → Authentication → Settings → Authorized domains
+   - Añade `<tu-proyecto>.vercel.app` (y el dominio personalizado si lo hay).
+
+## Cuentas del piloto
+
+| Cuenta | Rol |
+|--------|-----|
+| hotel.europa@nutrimesh.dev | Hotel (Gran Hotel Europa) |
+| barcelo@nutrimesh.dev | Hotel (Barceló Santo Domingo) |
+| coordinador@bard.org.do | Banco de alimentos |
+
+## Arquitectura
+
+```
+src/
+  pages/
+    LandingPage.tsx   Portada pública (/, sin sesión)
+    Login.tsx         Formulario de acceso (/login)
+    HotelDashboard.tsx  Panel del hotel (/hotel)
+    BancoDashboard.tsx  Panel del banco (/banco)
+    DriverView.tsx    Vista del chofer (/c/:token) — sin cuenta
+  components/
+    Nav.tsx           Navbar de los paneles autenticados
+    BatchRow.tsx      Fila de un lote en la lista
+  context/
+    AuthContext.tsx   Firebase Auth + modo demo
+    ActivityContext.tsx  Últimas 8 líneas de actividad
+  lib/
+    firebase.ts       Inicialización de Firebase (solo si .env existe)
+    store.ts          Capa de datos: Firestore o memoria
+    types.ts          Tipos compartidos
+    demo.ts           Datos en memoria para modo sin .env
+  styles/
+    global.css        Tokens, reset, utilidades y layout del panel
+```
+
+## Estados de un lote
+
+`PUBLICADO → CONFIRMADO → RECOGIDO → RECIBIDO / RECHAZADO`
+
+El hotel también puede reportar `SIN_EXCEDENTE` si no sobró nada.
