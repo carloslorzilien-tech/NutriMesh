@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ActivityProvider } from './context/ActivityContext';
 import Nav from './components/Nav';
 import Login from './pages/Login';
+import LandingPage from './pages/LandingPage';
 import HotelDashboard from './pages/HotelDashboard';
 import BancoDashboard from './pages/BancoDashboard';
 import DriverView from './pages/DriverView';
@@ -12,14 +13,15 @@ import './styles/global.css';
 /** Blocks until Firebase has resolved the initial auth state. */
 function AuthGate({ children }: { children: React.ReactElement }) {
   const { ready } = useAuth();
-  if (!ready) return null; // or a tiny spinner
+  if (!ready) return null;
   return children;
 }
 
-/** If authenticated, redirect / to the correct dashboard. */
-function RootRedirect() {
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
+/** / → landing si sin sesión, dashboard si con sesión. */
+function RootRoute() {
+  const { user, ready } = useAuth();
+  if (!ready) return null;
+  if (!user) return <LandingPage />;
   if (user.role === 'ong') return <Navigate to="/banco" replace />;
   return <Navigate to="/hotel" replace />;
 }
@@ -34,7 +36,7 @@ function RequireRole({ role, children }: { role: 'hotel' | 'ong'; children: Reac
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<AuthGate><RootRedirect /></AuthGate>} />
+      <Route path="/" element={<AuthGate><RootRoute /></AuthGate>} />
       <Route path="/login" element={<Login />} />
       <Route
         path="/hotel"

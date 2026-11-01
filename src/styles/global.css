@@ -316,3 +316,36 @@ input, select, textarea { font-family: var(--font-ui); }
   color: var(--ink-soft);
   margin-top: 2px;
 }
+
+/* ─── Landing / Login dark pages ─────────────────────────────── */
+
+/* Show photo column in login on desktop */
+@media (min-width: 768px) {
+  .login-photo-col {
+    display: block !important;
+  }
+}
+
+/* JetBrains Mono fallback */
+.font-mono-jet {
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+}
+
+/* Focus ring for dark backgrounds */
+.dark-focus:focus-visible {
+  outline: 2px solid #10B981;
+  outline-offset: 3px;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Respect reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
