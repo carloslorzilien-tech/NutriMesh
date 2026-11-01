@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logoPng from '../assets/logo.png';
 
 const DEMOS = [
   { label: 'Gran Hotel Europa', email: 'hotel.europa@nutrimesh.dev' },
   { label: 'Barceló Santo Domingo', email: 'barcelo@nutrimesh.dev' },
-  { label: 'Food bank — BARD', email: 'coordinador@bard.org.do' },
+  { label: 'Banco de Alimentos — BARD', email: 'coordinador@bard.org.do' },
 ];
 
 export default function Login() {
@@ -22,9 +23,14 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      navigate(email.includes('bard') ? '/banco' : '/hotel');
+      // navigation is handled or determined by role/email
+      if (email.trim().includes('bard')) {
+        navigate('/banco');
+      } else {
+        navigate('/hotel');
+      }
     } catch {
-      setErr('Incorrect email or password.');
+      setErr('Credenciales incorrectas.');
     } finally {
       setLoading(false);
     }
@@ -38,32 +44,31 @@ export default function Login() {
 
   return (
     <div className="login-wrap">
-
-      {/* Logo — prominent, centered */}
-      <div style={{ marginBottom: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-        <img src="/logo.svg" alt="NutriMesh" width={56} height={56} style={{ objectFit: 'contain' }} />
-        <span style={{ fontSize: 22, fontWeight: 600, color: 'var(--green)', letterSpacing: '-0.02em' }}>NutriMesh</span>
+      {/* Brand logo — 32 px, no pill */}
+      <div style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <img src={logoPng} alt="NutriMesh" width={32} height={32} style={{ objectFit: 'contain' }} />
+        <span style={{ fontSize: 18, fontWeight: 520, color: 'var(--green)' }}>NutriMesh</span>
       </div>
 
       <div className="login-box">
         <h1 style={{ fontSize: 24, fontWeight: 520, letterSpacing: '-0.02em', marginBottom: 24 }}>
-          Sign in
+          Entrar
         </h1>
 
         <form onSubmit={handleSubmit} className="stack stack-md">
           <div className="field">
-            <label>Email</label>
+            <label>Correo</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="correo@ejemplo.com"
               required
               autoComplete="email"
             />
           </div>
           <div className="field">
-            <label>Password</label>
+            <label>Contraseña</label>
             <input
               type="password"
               value={password}
@@ -74,19 +79,21 @@ export default function Login() {
             />
           </div>
 
-          {err && <p className="field-error">{err}</p>}
+          {err && <p className="notice">{err}</p>}
 
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: 4 }}>
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
 
         <hr className="divider" />
 
         <div className="stack stack-sm">
-          <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 4 }}>Demo accounts — password is <span className="mono">demo1234</span></p>
+          <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 4 }}>
+            Cuentas demo — contraseña <span className="mono">demo1234</span>
+          </p>
           {DEMOS.map(d => (
-            <button key={d.email} className="demo-link" onClick={() => fill(d.email)} style={{ textAlign: 'left' }}>
+            <button key={d.email} type="button" className="demo-link" onClick={() => fill(d.email)} style={{ textAlign: 'left' }}>
               {d.label}
             </button>
           ))}

@@ -7,7 +7,7 @@ export type BatchStatus =
   | 'RECHAZADO'
   | 'SIN_EXCEDENTE';
 
-export type BatchCategory = 'sellado' | 'produccion_fria';
+export type BatchCategory = 'SELLADO' | 'PRODUCCION_FRIA';
 
 export type RejectionMotivo =
   | 'temperatura_destino'
@@ -22,35 +22,33 @@ export interface Batch {
   id: string;
   hotelId: string;
   hotelName: string;
-  item: string;
   category: BatchCategory;
-  kg: number;           // estimado por el hotel
-  tempC: number;        // temperatura de origen (hotel)
+  name: string;           // item name
+  estimatedKg: number;
+  originTempC: number;
+  window: string;         // "8:00–10:00"
   status: BatchStatus;
-  pickupWindow: string; // e.g. "8:00–10:00"
-  pickupDate: string;   // e.g. "2024-11-01"
   driverName?: string;
   driverToken?: string;
-  driverKg?: number;        // kg que declaró el chofer
-  packagingOk?: boolean;    // chofer confirmó empaque cerrado
-  acceptedKg?: number;      // banco acepta (base del impacto)
-  rejectedKg?: number;      // banco rechaza
-  rejectionMotivo?: RejectionMotivo;
-  destTempC?: number;       // temperatura en destino (opcional, banco)
+  pickedUpKg?: number;    // declared by driver / bank in memory mode
+  acceptedKg?: number;
+  rejectedKg?: number;
+  rejectReason?: RejectionMotivo;
+  destTempC?: number;
   createdAt: number;
+  updatedAt: number;
 }
 
 export interface Hotel {
   id: string;
   name: string;
-  address: string;
-  dockNote?: string;
+  dock: string;
 }
 
-export interface User {
+export interface AppUser {
   uid: string;
   email: string;
-  role: 'hotel' | 'bank';
+  role: 'hotel' | 'ong';
   hotelId?: string;
   displayName?: string;
 }

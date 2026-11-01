@@ -1,7 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getBatchesByHotel, getHotelById, addBatch, newId } from '../lib/demo';
-import type { Batch, BatchCategory } from '../lib/types';
+import { useActivity } from '../context/ActivityContext';
+import {
+  subscribeBatches,
+  subscribeHotel,
+  publishBatch,
+} from '../lib/store';
+import type { Batch, BatchCategory, Hotel } from '../lib/types';
 import BatchRow from '../components/BatchRow';
 
 const FORBIDDEN_WORDS = ['formula', 'infant', 'baby', 'fórmula', 'buffet'];
@@ -15,38 +20,64 @@ const WINDOWS = ['8:00–10:00', '9:00–11:00', '10:00–12:00'];
 
 export default function HotelDashboard() {
   const { user } = useAuth();
-  const hotel = getHotelById(user?.hotelId ?? '');
+  const { push } = useActivity();
 
+  const [hotel, setHotel] = useState<Hotel | null>(null);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [item, setItem] = useState('');
-  const [category, setCategory] = useState<BatchCategory>('sellado');
-  const [kg, setKg] = useState('');
-  const [tempC, setTempC] = useState('');
-  const [pickupWindow, setPickupWindow] = useState(WINDOWS[0]);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState<BatchCategory>('SELLADO');
+  const [estimatedKg, setEstimatedKg] = useState('');
+  const [originTempC, setOriginTempC] = useState('');
+  const [windowVal, setWindowVal] = useState(WINDOWS[0]);
   const [formErr, setFormErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [noSurplusLoading, setNoSurplusLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const prevBatchesRef = useRef<Record<string, string>>({});
+
+  // Subscribe to hotel details (name, dock)
   useEffect(() => {
-    setBatches(getBatchesByHotel(user?.hotelId ?? ''));
-  }, [user]);
+    if (!user?.hotelId) return;
+    const unsub = subscribeHotel(user.hotelId, h => {
+      if (h) setHotel(h);
+      else setHotel({ id: user.hotelId!, name: user.displayName || 'Hotel', dock: '' });
+    });
+    return () => unsub();
+  }, [user?.hotelId, user?.displayName]);
 
-  const refresh = () => setBatches(getBatchesByHotel(user?.hotelId ?? ''));
+  // Subscribe to batches in real-time
+  useEffect(() => {
+    if (!user?.hotelId) return;
+    const unsub = subscribeBatches(user.hotelId, list => {
+      // track transitions for activity feed
+      list.forEach(b => {
+        const prev = prevBatchesRef.current[b.id];
+        if (!prev || prev !== b.status) {
+          push(b, prev);
+          prevBatchesRef.current[b.id] = b.status;
+        }
+      });
+      setBatches(list);
+    });
+    return () => unsub();
+  }, [user?.hotelId, push]);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormErr('');
     setSuccess(false);
 
-    const t = parseFloat(tempC);
-    const k = parseFloat(kg);
+    const t = parseFloat(originTempC);
+    const k = parseFloat(estimatedKg);
 
-    if (isForbidden(item)) {
-      setFormErr('Buffet, comida de huésped y fórmula infantil no se pueden publicar.');
+    if (isForbidden(name)) {
+      setFormErr('Buffet, plato de huésped y fórmula infantil no se pueden publicar.');
       return;
     }
     if (isNaN(t) || t > 4) {
-      setFormErr(`Temperatura ${t} °C supera los 4 °C. El lote no puede publicarse. Enfría primero.`);
+      setFormErr(`Temperatura ${isNaN(t) ? originTempC : t} °C supera los 4 °C. No se puede publicar.`);
       return;
     }
     if (isNaN(k) || k <= 0) {
@@ -54,83 +85,105 @@ export default function HotelDashboard() {
       return;
     }
 
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    setLoading(true);
+    try {
+      const hotelId = user?.hotelId || 'hotel-europa';
+      const hotelName = hotel?.name || user?.displayName || 'Hotel';
+      const driverToken = `tok-${Date.now().toString(36)}`;
 
-    const batch: Batch = {
-      id: newId(),
-      hotelId: user!.hotelId!,
-      hotelName: hotel!.name,
-      item: item.trim(),
-      category,
-      kg: k,
-      tempC: t,
-      status: 'PUBLICADO',
-      pickupWindow,
-      pickupDate: tomorrow.toISOString().slice(0, 10),
-      driverToken: `tok-${newId()}`,
-      createdAt: Date.now(),
-    };
+      await publishBatch({
+        hotelId,
+        hotelName,
+        category,
+        name: name.trim(),
+        estimatedKg: k,
+        originTempC: t,
+        window: windowVal,
+        status: 'PUBLICADO',
+        driverToken,
+      });
 
-    addBatch(batch);
-    refresh();
-    setItem('');
-    setKg('');
-    setTempC('');
-    setPickupWindow(WINDOWS[0]);
-    setShowForm(false);
-    setSuccess(true);
+      setName('');
+      setEstimatedKg('');
+      setOriginTempC('');
+      setWindowVal(WINDOWS[0]);
+      setShowForm(false);
+      setSuccess(true);
+    } catch {
+      setFormErr('Error al publicar el lote. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const markNoSurplus = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const batch: Batch = {
-      id: newId(),
-      hotelId: user!.hotelId!,
-      hotelName: hotel!.name,
-      item: 'Sin excedente hoy',
-      category: 'sellado',
-      kg: 0,
-      tempC: 0,
-      status: 'SIN_EXCEDENTE',
-      pickupWindow: '—',
-      pickupDate: tomorrow.toISOString().slice(0, 10),
-      createdAt: Date.now(),
-    };
-    addBatch(batch);
-    refresh();
+  const markNoSurplus = async () => {
+    setFormErr('');
     setSuccess(false);
+    setNoSurplusLoading(true);
+    try {
+      const hotelId = user?.hotelId || 'hotel-europa';
+      const hotelName = hotel?.name || user?.displayName || 'Hotel';
+
+      await publishBatch({
+        hotelId,
+        hotelName,
+        category: 'SELLADO',
+        name: 'Sin excedente hoy',
+        estimatedKg: 0,
+        originTempC: 0,
+        window: '—',
+        status: 'SIN_EXCEDENTE',
+      });
+    } catch {
+      setFormErr('No se pudo registrar.');
+    } finally {
+      setNoSurplusLoading(false);
+    }
   };
 
-  // Solo "Pendiente": PUBLICADO sin chofer + CONFIRMADO
   const pending = batches.filter(
     b => b.status === 'PUBLICADO' || b.status === 'CONFIRMADO'
   );
-  const rest = batches.filter(
+  const others = batches.filter(
     b => b.status !== 'PUBLICADO' && b.status !== 'CONFIRMADO'
   );
 
-  const tempOver = !isNaN(parseFloat(tempC)) && parseFloat(tempC) > 4;
+  const tempNum = parseFloat(originTempC);
+  const tempOver = !isNaN(tempNum) && tempNum > 4;
 
   return (
     <div>
-      {/* 3px teal top line */}
+      {/* Línea de 3 px #1F6F78 arriba del todo y nada más de ese color */}
       <div style={{ height: 3, background: '#1F6F78', width: '100%' }} />
 
       <div className="page">
-        <h1 style={{ fontSize: 26, fontWeight: 520, letterSpacing: '-0.02em', margin: '32px 0 24px' }}>
-          {hotel?.name ?? 'Hotel'}
+        <h1 style={{ fontSize: 26, fontWeight: 520, letterSpacing: '-0.02em', margin: '32px 0 6px' }}>
+          {hotel?.name ?? user?.displayName ?? 'Hotel'}
         </h1>
+        {hotel?.dock && (
+          <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 28 }}>
+            Muelle: {hotel.dock}
+          </p>
+        )}
 
-        {/* Primary actions */}
+        {/* Botones de acción */}
         {!showForm && (
-          <div className="stack stack-sm" style={{ marginBottom: 32 }}>
-            <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={() => { setShowForm(true); setSuccess(false); }}>
+          <div className="stack stack-sm" style={{ marginBottom: 32, marginTop: hotel?.dock ? 0 : 20 }}>
+            <button
+              className="btn btn-primary btn-lg"
+              style={{ width: '100%' }}
+              onClick={() => { setShowForm(true); setSuccess(false); }}
+            >
               Publicar excedente
             </button>
-            <button className="btn btn-ghost" style={{ width: '100%' }} onClick={markNoSurplus}>
-              Hoy no hay excedente
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ width: '100%' }}
+              disabled={noSurplusLoading}
+              onClick={markNoSurplus}
+            >
+              {noSurplusLoading ? 'Guardando…' : 'Hoy no hay excedente'}
             </button>
           </div>
         )}
@@ -141,14 +194,14 @@ export default function HotelDashboard() {
           </p>
         )}
 
-        {/* Form */}
+        {/* Formulario */}
         {showForm && (
           <form onSubmit={submit} className="stack stack-md" style={{ marginBottom: 40 }}>
             <div className="field">
               <label>Categoría</label>
               <select value={category} onChange={e => setCategory(e.target.value as BatchCategory)}>
-                <option value="sellado">Insumo sellado del almacén, cerca de vencer</option>
-                <option value="produccion_fria">Producción de cocina fría — guardada a 4 °C o menos</option>
+                <option value="SELLADO">Insumo sellado del almacén, cerca de vencer</option>
+                <option value="PRODUCCION_FRIA">Producción de cocina que no salió a la barra (guardada a 4 °C o menos)</option>
               </select>
             </div>
 
@@ -156,9 +209,9 @@ export default function HotelDashboard() {
               <label>¿Qué es?</label>
               <input
                 type="text"
-                value={item}
-                onChange={e => setItem(e.target.value)}
-                placeholder="Ej. Pechuga de pollo envasada, queso fresco"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Ej. Pechuga de pollo envasada, quesos"
                 required
               />
             </div>
@@ -166,15 +219,23 @@ export default function HotelDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="field">
                 <label>Peso estimado (kg)</label>
-                <input type="number" min="0.1" step="0.1" value={kg} onChange={e => setKg(e.target.value)} placeholder="18" required />
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={estimatedKg}
+                  onChange={e => setEstimatedKg(e.target.value)}
+                  placeholder="18"
+                  required
+                />
               </div>
               <div className="field">
-                <label>Temperatura sonda (°C)</label>
+                <label>Temperatura de origen (°C)</label>
                 <input
                   type="number"
                   step="0.1"
-                  value={tempC}
-                  onChange={e => setTempC(e.target.value)}
+                  value={originTempC}
+                  onChange={e => setOriginTempC(e.target.value)}
                   placeholder="3"
                   required
                   style={tempOver ? { borderColor: 'var(--terra)' } : undefined}
@@ -183,47 +244,55 @@ export default function HotelDashboard() {
             </div>
 
             <div className="field">
-              <label>Ventana de recogida mañana</label>
-              <select value={pickupWindow} onChange={e => setPickupWindow(e.target.value)}>
+              <label>Ventana de mañana</label>
+              <select value={windowVal} onChange={e => setWindowVal(e.target.value)}>
                 {WINDOWS.map(w => <option key={w} value={w}>{w}</option>)}
               </select>
             </div>
 
             {tempOver && (
               <p className="notice">
-                <span style={{ color: 'var(--terra)' }}>{parseFloat(tempC)} °C</span> supera los 4 °C — el lote no puede publicarse.
+                {originTempC} °C supera los 4 °C. No se puede publicar. Enfría primero.
               </p>
             )}
-            {isForbidden(item) && (
-              <p className="notice">Buffet, comida de huésped y fórmula infantil no se pueden publicar.</p>
+            {isForbidden(name) && (
+              <p className="notice">Buffet, plato de huésped y fórmula infantil no se pueden publicar.</p>
             )}
             {formErr && <p className="notice">{formErr}</p>}
 
             <div style={{ display: 'flex', gap: 12 }}>
-              <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Publicar</button>
-              <button type="button" className="btn btn-ghost" onClick={() => { setShowForm(false); setFormErr(''); }}>Cancelar</button>
+              <button type="submit" className="btn btn-primary" disabled={loading} style={{ flex: 1 }}>
+                {loading ? 'Publicando…' : 'Publicar'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => { setShowForm(false); setFormErr(''); }}
+              >
+                Cancelar
+              </button>
             </div>
           </form>
         )}
 
-        {/* Pendiente */}
-        {pending.length > 0 && (
-          <>
-            <p className="section-title" style={{ marginBottom: 12 }}>Pendiente</p>
+        {/* Pendiente: lotes publicados aún sin chofer, y lotes confirmados para mañana */}
+        <p className="section-title" style={{ marginBottom: 12 }}>Pendiente</p>
+        {pending.length === 0 ? (
+          <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginBottom: 24 }}>No hay lotes pendientes.</p>
+        ) : (
+          <div style={{ marginBottom: 28 }}>
             {pending.map(b => <BatchRow key={b.id} batch={b} />)}
-          </>
+          </div>
         )}
 
-        {/* Rest (RECOGIDO, RECIBIDO, RECHAZADO, SIN_EXCEDENTE) */}
-        {rest.length > 0 && (
+        {/* Historial (RECOGIDO, RECIBIDO, RECHAZADO, SIN_EXCEDENTE) */}
+        {others.length > 0 && (
           <>
-            <p className="section-title" style={{ marginTop: 32, marginBottom: 12 }}>Historial</p>
-            {rest.map(b => <BatchRow key={b.id} batch={b} />)}
+            <p className="section-title" style={{ marginTop: 24, marginBottom: 12 }}>Historial</p>
+            <div>
+              {others.map(b => <BatchRow key={b.id} batch={b} />)}
+            </div>
           </>
-        )}
-
-        {batches.length === 0 && (
-          <p style={{ fontSize: 14, color: 'var(--ink-soft)' }}>Aún no hay lotes publicados hoy.</p>
         )}
       </div>
     </div>
